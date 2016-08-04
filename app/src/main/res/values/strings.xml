@@ -1,0 +1,40 @@
+<resources>
+    <string name="app_name">HandWriter</string>
+
+    <string name="confirm_btn">确认</string>
+    <string name="cancel_btn">清除</string>
+    <string name="option_button">选项</string>
+
+    <string name="option_item_dialog_username">用户名</string>
+    <string name="option_item_dialog_username_hint">这里输入用户名</string>
+
+    <string name="option_title_new_user">新建用户</string>
+    <string name="option_title_enter_username">切换用户</string>
+    <string name="option_title_change_paint_color">画笔颜色</string>
+
+    <string name="new_user_dialog_title">新建用户</string>
+
+    <string name="enter_username_dialog_title">输入用户名</string>
+
+    <string name="hint_info">请在这里写下你的签名,当前用户: </string>
+
+    <string name="check_sdcard_unmounted_or_denied_title">SD卡错误</string>
+    <string name="check_sdcard_unmounted_or_denied_message">好吧，你的SD卡可能被拔出了，请检查一下吧～</string>
+    <string name="check_sdcard_file_create_error_title">文件读写权限错误</string>
+    <string name="check_sdcard_file_create_error_message">啊哦，我们好像不能获得你的SD卡读写权限哎～\n你能不能检查一下系统设置呢？</string>
+
+    <string name="save_confirm_dialog_title">这是真实的签名吗？</string>
+    <string name="no_username_dialog_title">你是谁？</string>
+    <string name="no_username_dialog_message">当前没有用户名，请切换到有效用户或者新建用户。</string>
+
+    <string name="change_paint_color_black_title">黑色（默认）</string>
+    <string name="change_paint_color_blue_title">蓝色</string>
+    <string name="change_paint_color_cyan_title">青色</string>
+    <string name="change_paint_color_dkgray_title">深灰</string>
+    <string name="change_paint_color_gray_title">灰色</string>
+    <string name="change_paint_color_green_title">绿色</string>
+    <string name="change_paint_color_ltgray_title">浅灰</string>
+    <string name="change_paint_color_magenta_title">品红</string>
+    <string name="change_paint_color_red_title">红色</string>
+    <string name="change_paint_color_yellow_title">黄色</string>
+</resources>

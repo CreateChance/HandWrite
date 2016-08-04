@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/new_user"
+        android:icon="@mipmap/ic_option_new_user"
+        android:title="@string/option_title_new_user"/>
+
+    <item
+        android:id="@+id/enter_username"
+        android:icon="@mipmap/ic_option_enter_username"
+        android:title="@string/option_title_enter_username"/>
+
+    <item
+        android:icon="@mipmap/ic_option_change_paint_color"
+        android:title="@string/option_title_change_paint_color">
+
+        <menu>
+            <group
+                android:checkableBehavior="single">
+                <item
+                    android:id="@+id/paint_color_black"
+                    android:checked="true"
+                    android:title="@string/change_paint_color_black_title"/>
+
+                <item
+                    android:id="@+id/paint_color_blue"
+                    android:title="@string/change_paint_color_blue_title"/>
+
+                <item
+                    android:id="@+id/paint_color_cyan"
+                    android:title="@string/change_paint_color_cyan_title"/>
+
+                <item
+                    android:id="@+id/paint_color_dkgray"
+                    android:title="@string/change_paint_color_dkgray_title"/>
+
+                <item
+                    android:id="@+id/paint_color_gray"
+                    android:title="@string/change_paint_color_gray_title"/>
+
+                <item
+                    android:id="@+id/paint_color_green"
+                    android:title="@string/change_paint_color_green_title"/>
+
+                <item
+                    android:id="@+id/paint_color_ltgray"
+                    android:title="@string/change_paint_color_ltgray_title"/>
+
+                <item
+                    android:id="@+id/paint_color_magenta"
+                    android:title="@string/change_paint_color_magenta_title"/>
+
+                <item
+                    android:id="@+id/paint_color_red"
+                    android:title="@string/change_paint_color_red_title"/>
+
+                <item
+                    android:id="@+id/paint_color_yellow"
+                    android:title="@string/change_paint_color_yellow_title"/>
+            </group>
+
+        </menu>
+
+    </item>
+
+
+</menu>
