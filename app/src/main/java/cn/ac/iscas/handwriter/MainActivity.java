@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -19,15 +20,16 @@ import android.util.SparseArray;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CursorAdapter;
 import android.widget.EditText;
 import android.widget.PopupMenu;
+import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.Iterator;
 
 import cn.ac.iscas.handwriter.views.SignaturePad;
 
@@ -49,24 +51,20 @@ public class MainActivity extends Activity {
 
     private PopupMenu popupMenu = null;
 
+    // database
+    private MyDatabase mDatabase = null;
+
     // shared prefs
-    private final String PREFS_USERS_LIST = "cn.ac.iscas.handwriter.userlist";
-    private final String PREFS_USERID_TO_SAMPLEID = "cn.ac.iscas.handwriter.userid2sampleid";
-    private final String PREFS_CURRENT_USERNAME = "cn.ac.iscas.handwriter.currentuser";
-    private final String PREFS_NEXT_USER = "cn.ac.iscas.handwriter.nextuser";
-    private SharedPreferences mUserListPreferences;
-    private SharedPreferences.Editor mUserListEditor;
-    private SharedPreferences mCurrentUsernamePreferences;
-    private SharedPreferences.Editor mCurrentUsernameEditor;
-    private SharedPreferences mUseridToSampleidPreferences;
-    private SharedPreferences.Editor mUseridToSampleidEditor;
-    private SharedPreferences mNextUserPreferences;
-    private SharedPreferences.Editor mNextUserEditor;
+    private final String PREFS_USER = "cn.ac.iscas.handwriter.currentuser";
+    private SharedPreferences mUserPreferences;
+    private SharedPreferences.Editor mUserEditor;
     private String mCurrentUsername = null;
-    private String mCurrentUserID = null;
+    private int mCurrentUserID;
     private int mCurrentSampleID = 0;
-    private final String CURRENT_USERNAME_KEY = "CurrentUsername";
     private int mNextUserId = 1;
+    private final String CURRENT_USERNAME_KEY = "CurrentUsername";
+    private final String CURRENT_USER_ID_KEY = "CurrentUserID";
+    private final String CURRENT_USER_SAMPLEID_KEY = "CurrentUserSampleID";
     private final String NEXT_USER_ID_KEY = "NextUserID";
 
     // writing tags
@@ -80,6 +78,9 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // init database.
+        mDatabase = new MyDatabase(this);
 
         mWriteEventHandler = new Handler() {
             @Override
@@ -177,20 +178,14 @@ public class MainActivity extends Activity {
         });
 
         // init prefs
-        mUserListPreferences = getSharedPreferences(PREFS_USERS_LIST, MODE_PRIVATE);
-        mUserListEditor = mUserListPreferences.edit();
-        mCurrentUsernamePreferences = getSharedPreferences(PREFS_CURRENT_USERNAME, MODE_PRIVATE);
-        mCurrentUsernameEditor = mCurrentUsernamePreferences.edit();
-        mUseridToSampleidPreferences = getSharedPreferences(PREFS_USERID_TO_SAMPLEID, MODE_PRIVATE);
-        mUseridToSampleidEditor = mUseridToSampleidPreferences.edit();
-        mNextUserPreferences = getSharedPreferences(PREFS_NEXT_USER, MODE_PRIVATE);
-        mNextUserEditor = mNextUserPreferences.edit();
+        mUserPreferences = getSharedPreferences(PREFS_USER, MODE_PRIVATE);
+        mUserEditor = mUserPreferences.edit();
 
         // get settings last time.
-        mCurrentUsername = mCurrentUsernamePreferences.getString(CURRENT_USERNAME_KEY, null);
-        getUserIDFromList(mCurrentUsername);
-        mNextUserId = mNextUserPreferences.getInt(NEXT_USER_ID_KEY, 1);
-        mCurrentSampleID = mUseridToSampleidPreferences.getInt(mCurrentUserID, 0);
+        mCurrentUsername = mUserPreferences.getString(CURRENT_USERNAME_KEY, null);
+        mCurrentUserID = mUserPreferences.getInt(CURRENT_USER_ID_KEY, 0);
+        mNextUserId = mUserPreferences.getInt(NEXT_USER_ID_KEY, 1);
+        mCurrentSampleID = mUserPreferences.getInt(CURRENT_USER_SAMPLEID_KEY, 0);
         mSignaturepadDescription.setText(getString(R.string.hint_info) + mCurrentUsername +
                 ":" + mCurrentUserID + ":" + mCurrentSampleID);
 
@@ -296,31 +291,41 @@ public class MainActivity extends Activity {
                 @Override
                 public boolean onMenuItemClick(final MenuItem item) {
 
-                    final View v = getLayoutInflater().inflate(R.layout.option_item_dialog, null);
-
-                    AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                    builder.setIcon(android.R.drawable.ic_dialog_info);
-                    builder.setView(v);
-
                     switch (item.getItemId()) {
                         case R.id.new_user:
-                            builder.setTitle(R.string.new_user_dialog_title);
-                            builder.setPositiveButton("ok", new DialogInterface.OnClickListener() {
+                            final View v = getLayoutInflater().inflate(R.layout.option_item_dialog, null);
+                            AlertDialog.Builder newUserBuilder = new AlertDialog.Builder(MainActivity.this);
+                            newUserBuilder.setIcon(android.R.drawable.ic_dialog_info);
+                            newUserBuilder.setView(v);
+                            newUserBuilder.setTitle(R.string.new_user_dialog_title);
+                            newUserBuilder.setPositiveButton("ok", new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
                                     EditText editText = (EditText) v.findViewById(R.id.username);
                                     String username = editText.getText().toString();
                                     if (username != null && username.length() != 0) {
-                                        mUserListEditor.putString(String.valueOf(mNextUserId++), username);
-                                        mNextUserEditor.putInt(NEXT_USER_ID_KEY, mNextUserId);
-                                        mCurrentUsernameEditor.putString(CURRENT_USERNAME_KEY, username);
-                                        mCurrentUsername = username;
-                                        mCurrentUserID = String.valueOf(mNextUserId - 1);
-                                        mCurrentSampleID = mUseridToSampleidPreferences.getInt(mCurrentUserID, 0);
 
-                                        mUserListEditor.commit();
-                                        mCurrentUsernameEditor.commit();
-                                        mNextUserEditor.commit();
+                                        // save this user to database.
+                                        mDatabase.insertData(mNextUserId, username, 0);
+
+                                        // save current username.
+                                        mCurrentUsername = username;
+                                        mUserEditor.putString(CURRENT_USERNAME_KEY, mCurrentUsername);
+
+                                        // save current user id.
+                                        mCurrentUserID = mNextUserId;
+                                        mUserEditor.putInt(CURRENT_USER_ID_KEY, mCurrentUserID);
+
+                                        // current sample id is zero for new user.
+                                        mCurrentSampleID = 0;
+                                        mUserEditor.putInt(CURRENT_USER_SAMPLEID_KEY, mCurrentSampleID);
+
+                                        // increase next user id and save id.
+                                        mNextUserId++;
+                                        mUserEditor.putInt(NEXT_USER_ID_KEY, mNextUserId);
+
+                                        // commit to persist.
+                                        mUserEditor.commit();
 
                                         // update Description
                                         mSignaturepadDescription.setText(getString(R.string.hint_info) +
@@ -328,38 +333,63 @@ public class MainActivity extends Activity {
                                     } else {
                                         Toast.makeText(MainActivity.this, "亲，用户名不能为空哦!", Toast.LENGTH_SHORT).show();
                                     }
+
                                     dialog.dismiss();
+
                                     fullScreenDisplay();
                                 }
                             });
-                            builder.create().show();
+                            newUserBuilder.create().show();
                             break;
-                        case R.id.enter_username:
-                            builder.setTitle(R.string.option_title_enter_username);
-                            builder.setPositiveButton("ok", new DialogInterface.OnClickListener() {
+                        case R.id.switch_user:
+                            AlertDialog.Builder switchUserbuilder = new AlertDialog.Builder(MainActivity.this);
+                            switchUserbuilder.setTitle(R.string.option_switch_user_dialog_title);
+                            switchUserbuilder.setIcon(android.R.drawable.ic_dialog_info);
+                            switchUserbuilder.setCancelable(false);
+                            final Cursor cursor = mDatabase.searchUserByID(0);
+                            switchUserbuilder.setSingleChoiceItems(new SimpleCursorAdapter(MainActivity.this,
+                                            R.layout.userid_name,
+                                            cursor,
+                                            new String[]{"userid", "username"},
+                                            new int[]{R.id.userid, R.id.username},
+                                            CursorAdapter.FLAG_REGISTER_CONTENT_OBSERVER), -1, new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            // move to target.
+                                            cursor.moveToPosition(which);
+
+                                            // save current user id.
+                                            mCurrentUserID = cursor.getInt(1);
+                                            mUserEditor.putInt(CURRENT_USER_ID_KEY, mCurrentUserID);
+
+                                            // save current user name.
+                                            mCurrentUsername = cursor.getString(2);
+                                            mUserEditor.putString(CURRENT_USERNAME_KEY, mCurrentUsername);
+
+                                            // save current user sample id.
+                                            mCurrentSampleID = cursor.getInt(3);
+                                            mUserEditor.putInt(CURRENT_USER_SAMPLEID_KEY, mCurrentSampleID);
+
+                                            // commit to persist.
+                                            mUserEditor.commit();
+
+                                            // update Description
+                                            mSignaturepadDescription.setText(getString(R.string.hint_info) +
+                                                    mCurrentUsername + ":" +  mCurrentUserID + ":" + mCurrentSampleID);
+
+                                            dialog.dismiss();
+
+                                            fullScreenDisplay();
+                                        }
+                                    });
+                            switchUserbuilder.setNegativeButton("cancel", new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
-                                    EditText editText = (EditText) v.findViewById(R.id.username);
-                                    String username = editText.getText().toString();
-
-                                    if (getUserIDFromList(username) != -1) {
-                                        mCurrentUsername = username;
-                                        mCurrentUsernameEditor.putString(CURRENT_USERNAME_KEY, username);
-                                        mCurrentUsernameEditor.commit();
-                                        mCurrentSampleID = mUseridToSampleidPreferences.getInt(mCurrentUserID, 0);
-
-                                        // update Description
-                                        mSignaturepadDescription.setText(getString(R.string.hint_info) +
-                                                mCurrentUsername + ":" + mCurrentUserID + ":" + mCurrentSampleID);
-                                    } else {
-                                        Toast.makeText(MainActivity.this, "亲，系统好像找不到这个名字!", Toast.LENGTH_SHORT).show();
-                                    }
-
                                     dialog.dismiss();
                                     fullScreenDisplay();
                                 }
                             });
-                            builder.create().show();
+                            switchUserbuilder.create().show();
                             break;
                         default:
                             setPaintColor(item);
@@ -432,26 +462,6 @@ public class MainActivity extends Activity {
         fullScreenDisplay();
     }
 
-    private int getUserIDFromList(String username) {
-        int ret = -1;
-
-        if (username == null || username.length() == 0) {
-            return -1;
-        }
-
-        Iterator<String> userkeys = mUserListPreferences.getAll().keySet().iterator();
-        while (userkeys.hasNext()) {
-            String key = userkeys.next();
-            if (username.equals(mUserListPreferences.getString(key, null))) {
-                ret = Integer.valueOf(key);
-                mCurrentUserID = String.valueOf(ret);
-                break;
-            }
-        }
-
-        return ret;
-    }
-
     private int checkExternalFile() {
 
         if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
@@ -462,7 +472,7 @@ public class MainActivity extends Activity {
 
         try {
             File records = new File(sdcardDir.getCanonicalPath(), RECORDS_FILE_NAME);
-            boolean isFileOk = false;
+            boolean isFileOk;
             if (!records.exists()) {
                 isFileOk = records.createNewFile();
             } else {
@@ -517,8 +527,7 @@ public class MainActivity extends Activity {
 
             try {
                 // write tags
-                int sampleid = mUseridToSampleidPreferences.getInt(mCurrentUserID, 0);
-                String tag = SIGNATUREID_TAG + " " + mCurrentUserID + "_" + sampleid + "\n";
+                String tag = SIGNATUREID_TAG + " " + mCurrentUserID + "_" + mCurrentSampleID + "\n";
                 mRecordsFileOutStream.write(tag.getBytes());
                 tag = SIGNATURELABLE_TAG + " " + isTrue + "\n";
                 mRecordsFileOutStream.write(tag.getBytes());
@@ -537,9 +546,9 @@ public class MainActivity extends Activity {
                 mRecordsFileOutStream.write('\n');
 
                 // add sample id
-                mCurrentSampleID = sampleid + 1;
-                mUseridToSampleidEditor.putInt(mCurrentUserID, mCurrentSampleID);
-                mUseridToSampleidEditor.commit();
+                mCurrentSampleID++;
+                mUserEditor.putInt(CURRENT_USER_SAMPLEID_KEY, mCurrentSampleID);
+                mUserEditor.commit();
 
                 // update sample id info of description.
                 mWriteEventHandler.obtainMessage(MSG_WRITE_COMPLETE).sendToTarget();

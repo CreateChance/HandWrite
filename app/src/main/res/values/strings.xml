@@ -9,7 +9,8 @@
     <string name="option_item_dialog_username_hint">这里输入用户名</string>
 
     <string name="option_title_new_user">新建用户</string>
-    <string name="option_title_enter_username">切换用户</string>
+    <string name="option_title_switch_user">切换用户</string>
+    <string name="option_switch_user_dialog_title">请选择用户(ID~UserName)</string>
     <string name="option_title_change_paint_color">画笔颜色</string>
 
     <string name="new_user_dialog_title">新建用户</string>

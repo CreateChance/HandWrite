@@ -6,9 +6,9 @@
         android:title="@string/option_title_new_user"/>
 
     <item
-        android:id="@+id/enter_username"
+        android:id="@+id/switch_user"
         android:icon="@mipmap/ic_option_enter_username"
-        android:title="@string/option_title_enter_username"/>
+        android:title="@string/option_title_switch_user"/>
 
     <item
         android:icon="@mipmap/ic_option_change_paint_color"
